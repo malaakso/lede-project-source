@@ -32,6 +32,7 @@ endef
 
 define uboot/clearfog
   TITLE:=U-Boot for SolidRun ClearFog A1
+  DEVICE:=armada-388-clearfog
 endef
 
 UBOOTS:= \
@@ -41,18 +42,20 @@ define Package/uboot/template
 define Package/uboot-mvebu-$(1)
   SECTION:=boot
   CATEGORY:=Boot Loaders
-  DEPENDS:=@TARGET_mvebu
+  DEPENDS:=@(TARGET_DEVICE_mvebu_DEVICE_$(3)||TARGET_mvebu_DEVICE_$(3))
+  DEFAULT:=m
+  HIDDEN:=1
   TITLE:=$(2)
   URL:=http://www.denx.de/wiki/U-Boot
   VARIANT:=$(1)
-  MAINTAINER:=Luka Perkov <luka@openwrt.org>
+  MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 endef
 endef
 
 define BuildUBootPackage
 	$(eval $(uboot/Default))
 	$(eval $(uboot/$(1)))
-	$(call Package/uboot/template,$(1),$(TITLE))
+	$(call Package/uboot/template,$(1),$(TITLE),$(DEVICE))
 endef
 
 define Build/Configure
@@ -70,6 +73,9 @@ define Package/uboot/install/default
 	$(INSTALL_DIR) $(BIN_DIR)/uboot-$(BOARD)-$(1)
 	$(CP) $(PKG_BUILD_DIR)/u-boot-spl.kwb \
 		$(BIN_DIR)/uboot-$(BOARD)-$(1)/openwrt-$(BOARD)-$(1)-u-boot-spl.kwb
+	$(INSTALL_DIR) $(KERNEL_BUILD_DIR)/
+	$(CP) $(PKG_BUILD_DIR)/u-boot-spl.kwb \
+		$(KERNEL_BUILD_DIR)/openwrt-$(BOARD)-$(1)-u-boot-spl.kwb
 	$(INSTALL_DIR) $(BIN_DIR)/u-boot-kwboot/
 	$(CP) $(PKG_BUILD_DIR)/tools/kwboot \
 		$(BIN_DIR)/u-boot-kwboot/

@@ -148,7 +148,9 @@ $(eval $(call KernelPackage,8021q))
 define KernelPackage/udptunnel4
   SUBMENU:=$(NETWORK_SUPPORT_MENU)
   TITLE:=IPv4 UDP tunneling support
-  KCONFIG:=CONFIG_NET_UDP_TUNNEL
+  KCONFIG:= \
+	CONFIG_NET_UDP_TUNNEL \
+	CONFIG_VXLAN=m
   HIDDEN:=1
   FILES:=$(LINUX_DIR)/net/ipv4/udp_tunnel.ko
   AUTOLOAD:=$(call AutoLoad,32,udp_tunnel)
@@ -161,7 +163,9 @@ define KernelPackage/udptunnel6
   SUBMENU:=$(NETWORK_SUPPORT_MENU)
   TITLE:=IPv6 UDP tunneling support
   DEPENDS:=@IPV6
-  KCONFIG:=CONFIG_NET_UDP_TUNNEL
+  KCONFIG:= \
+	CONFIG_NET_UDP_TUNNEL \
+	CONFIG_VXLAN=m
   HIDDEN:=1
   FILES:=$(LINUX_DIR)/net/ipv6/ip6_udp_tunnel.ko
   AUTOLOAD:=$(call AutoLoad,32,ip6_udp_tunnel)
@@ -288,7 +292,10 @@ IPSEC-m:= \
 define KernelPackage/ipsec
   SUBMENU:=$(NETWORK_SUPPORT_MENU)
   TITLE:=IPsec related modules (IPv4 and IPv6)
-  DEPENDS:=+kmod-crypto-authenc +kmod-crypto-iv +kmod-crypto-des +kmod-crypto-hmac +kmod-crypto-md5 +kmod-crypto-sha1 +kmod-crypto-deflate +kmod-crypto-cbc
+  DEPENDS:= \
+	+kmod-crypto-authenc +kmod-crypto-cbc +kmod-crypto-deflate \
+	+kmod-crypto-des +kmod-crypto-echainiv +kmod-crypto-hmac \
+	+kmod-crypto-iv +kmod-crypto-md5 +kmod-crypto-sha1
   KCONFIG:= \
 	CONFIG_NET_KEY \
 	CONFIG_XFRM_USER \
@@ -444,7 +451,8 @@ define KernelPackage/iptunnel4
   TITLE:=IPv4 tunneling
   HIDDEN:=1
   KCONFIG:= \
-	CONFIG_INET_TUNNEL
+	CONFIG_INET_TUNNEL \
+	CONFIG_NET_IPIP=m
   FILES:=$(LINUX_DIR)/net/ipv4/tunnel4.ko
   AUTOLOAD:=$(call AutoLoad,31,tunnel4)
 endef
@@ -1036,3 +1044,18 @@ define KernelPackage/9pnet/description
 endef
 
 $(eval $(call KernelPackage,9pnet))
+
+
+define KernelPackage/nlmon
+  SUBMENU:=$(NETWORK_SUPPORT_MENU)
+  TITLE:=Virtual netlink monitoring device
+  KCONFIG:=CONFIG_NLMON
+  FILES:=$(LINUX_DIR)/drivers/net/nlmon.ko
+  AUTOLOAD:=$(call AutoProbe,nlmon)
+endef
+
+define KernelPackage/nlmon/description
+  Kernel module which adds a monitoring device for netlink.
+endef
+
+$(eval $(call KernelPackage,nlmon))

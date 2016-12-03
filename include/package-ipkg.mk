@@ -103,20 +103,20 @@ ifeq ($(DUMP),)
         ifneq ($(ABI_VERSION),)
         compile: $(PKG_INFO_DIR)/$(1).version
         endif
+      else
+        $(if $(CONFIG_PACKAGE_$(1)),$$(info WARNING: skipping $(1) -- package not selected))
+      endif
 
-        ifeq ($(CONFIG_PACKAGE_$(1)),y)
-          .PHONY: $(PKG_INSTALL_STAMP).$(1)
-          compile: $(PKG_INSTALL_STAMP).$(1)
-          $(PKG_INSTALL_STAMP).$(1):
+      .PHONY: $(PKG_INSTALL_STAMP).$(1)
+      compile: $(PKG_INSTALL_STAMP).$(1)
+      $(PKG_INSTALL_STAMP).$(1):
 			if [ -f $(PKG_INSTALL_STAMP).clean ]; then \
 				rm -f \
 					$(PKG_INSTALL_STAMP) \
 					$(PKG_INSTALL_STAMP).clean; \
-			fi; \
+			fi
+      ifeq ($(CONFIG_PACKAGE_$(1)),y)
 			echo "$(1)" >> $(PKG_INSTALL_STAMP)
-        endif
-      else
-        $(if $(CONFIG_PACKAGE_$(1)),$$(info WARNING: skipping $(1) -- package not selected))
       endif
     endif
     endif
@@ -133,6 +133,7 @@ ifeq ($(DUMP),)
     $(eval $(call BuildIPKGVariable,$(1),prerm,-pkg,1))
     $(eval $(call BuildIPKGVariable,$(1),postrm,,1))
 
+    $(STAGING_DIR_ROOT)/stamp/.$(1)_installed : export PATH=$$(TARGET_PATH_PKG)
     $(STAGING_DIR_ROOT)/stamp/.$(1)_installed: $(STAMP_BUILT)
 	rm -rf $(STAGING_DIR_ROOT)/tmp-$(1)
 	mkdir -p $(STAGING_DIR_ROOT)/stamp $(STAGING_DIR_ROOT)/tmp-$(1)
@@ -172,8 +173,9 @@ $(_endef)
     $(PKG_INFO_DIR)/$(1).provides: $$(IPKG_$(1))
     $$(IPKG_$(1)) : export CONTROL=$$(Package/$(1)/CONTROL)
     $$(IPKG_$(1)) : export DESCRIPTION=$$(Package/$(1)/description)
+    $$(IPKG_$(1)) : export PATH=$$(TARGET_PATH_PKG)
     $$(IPKG_$(1)): $(STAMP_BUILT) $(INCLUDE_DIR)/package-ipkg.mk
-	@rm -rf $$(PDIR_$(1))/$(1)_* $$(IDIR_$(1))
+	@rm -rf $$(IDIR_$(1)) $$(call opkg_package_files,$(1))
 	mkdir -p $(PACKAGE_DIR) $$(IDIR_$(1))/CONTROL $(PKG_INFO_DIR)
 	$(call Package/$(1)/install,$$(IDIR_$(1)))
 	-find $$(IDIR_$(1)) -name 'CVS' -o -name '.svn' -o -name '.#*' -o -name '*~'| $(XARGS) rm -rf
@@ -228,7 +230,7 @@ $(_endef)
 	@[ -f $$(IPKG_$(1)) ]
 
     $(1)-clean:
-	rm -f $$(PDIR_$(1))/$(1)_*
+	$$(if $$(call opkg_package_files,$(1)),rm -f $$(call opkg_package_files,$(1)))
 
     clean: $(1)-clean
 

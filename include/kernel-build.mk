@@ -65,7 +65,7 @@ ifeq ($(DUMP)$(filter prereq clean refresh update,$(MAKECMDGOALS)),)
   ifneq ($(if $(QUILT),,$(CONFIG_AUTOREBUILD)),)
     define Kernel/Autoclean
       $(PKG_BUILD_DIR)/.dep_files: $(STAMP_PREPARED)
-      $(call rdep,${CURDIR} $(PKG_FILE_DEPENDS),$(STAMP_PREPARED),$(PKG_BUILD_DIR)/.dep_files,-x "*/.dep_*")
+      $(call rdep,$(KERNEL_FILE_DEPENDS),$(STAMP_PREPARED),$(PKG_BUILD_DIR)/.dep_files,-x "*/.dep_*")
     endef
   endif
 endif
@@ -141,7 +141,7 @@ define BuildKernel
 	rm -f $(LINUX_DIR)/.config.prev
 	rm -f $(STAMP_CONFIGURED)
 	$(LINUX_RECONF_CMD) > $(LINUX_DIR)/.config
-	$(_SINGLE)$(MAKE) -C $(LINUX_DIR) $(KERNEL_MAKEOPTS) $$@
+	$(_SINGLE)$(MAKE) -C $(LINUX_DIR) $(KERNEL_MAKEOPTS) HOST_LOADLIBES="-L$(STAGING_DIR_HOST)/lib -lncurses" $$@
 	$(LINUX_RECONF_DIFF) $(LINUX_DIR)/.config > $(LINUX_RECONFIG_TARGET)
 
   install: $(LINUX_DIR)/.image

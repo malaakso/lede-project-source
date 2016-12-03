@@ -22,6 +22,22 @@ define Build/lzma-d16
 	mv $@.new $@
 endef
 
+# Similar to Build/tplink-safeloader but uses TRX instead of clean kernel
+define Build/bcm53xx-tplink-safeloader
+	$(STAGING_DIR_HOST)/bin/trx \
+		-o $@.trx \
+		-m 33554432 \
+		-f $(IMAGE_KERNEL) -a 1024
+	$(STAGING_DIR_HOST)/bin/tplink-safeloader \
+		-B $(TPLINK_BOARD) \
+		-k $@.trx \
+		-r $@ \
+		-j \
+		-o $@.new
+	mv $@.new $@
+	rm $@.trx
+endef
+
 define Build/trx-serial
 	$(STAGING_DIR_HOST)/bin/trx \
 		-o $@.new \
@@ -68,10 +84,13 @@ define Build/seama-nand
 		-i $@.entity
 endef
 
-DEVICE_VARS += PRODUCTID SIGNATURE NETGEAR_BOARD_ID NETGEAR_REGION
+DEVICE_VARS += PRODUCTID SIGNATURE NETGEAR_BOARD_ID NETGEAR_REGION TPLINK_BOARD
 
-USB2_PACKAGES := kmod-usb-ohci kmod-usb2
-USB3_PACKAGES := kmod-usb-ohci kmod-usb2 kmod-usb3
+BRCMFMAC_43602A1 := kmod-brcmfmac brcmfmac-firmware-43602a1-pcie
+BRCMFMAC_4366B1 := kmod-brcmfmac brcmfmac-firmware-4366b1-pcie
+USB2_PACKAGES := kmod-usb-ohci kmod-usb2 kmod-phy-bcm-ns-usb2
+USB2_PACKAGES += kmod-usb-ledtrig-usbport
+USB3_PACKAGES := $(USB2_PACKAGES) kmod-usb3 kmod-phy-bcm-ns-usb3
 
 define Device/Default
   # .dtb files are prefixed by SoC type, e.g. bcm4708- which is not included in device/image names
@@ -83,9 +102,8 @@ define Device/Default
   KERNEL_NAME := zImage
   IMAGE_NAME = $$(IMAGE_PREFIX)-$$(1).$$(2)
   IMAGES := trx
-  BLOCKSIZE := 128KiB
+  BLOCKSIZE := 128k
   PAGESIZE := 2048
-  UBINIZE_OPTS :=
   IMAGE/trx := append-ubi | trx-nand
 endef
 
@@ -149,7 +167,7 @@ endef
 
 define Device/dlink-dir-885l
   DEVICE_TITLE := D-Link DIR-885L
-  DEVICE_PACKAGES := kmod-brcmfmac $(USB3_PACKAGES)
+  DEVICE_PACKAGES := $(BRCMFMAC_4366B1) $(USB3_PACKAGES)
   $(Device/dlink)
   SIGNATURE := wrgac42_dlink.2015_dir885l
 endef
@@ -191,7 +209,7 @@ TARGET_DEVICES += netgear-r7000
 
 define Device/netgear-r7900
   DEVICE_TITLE := Netgear R7900
-  DEVICE_PACKAGES := kmod-brcmfmac $(USB3_PACKAGES)
+  DEVICE_PACKAGES := $(BRCMFMAC_43602A1) $(USB3_PACKAGES)
   $(Device/netgear)
   NETGEAR_BOARD_ID := U12H315T30_NETGEAR
 endef
@@ -199,14 +217,14 @@ TARGET_DEVICES += netgear-r7900
 
 define Device/netgear-r8000
   DEVICE_TITLE := Netgear R8000
-  DEVICE_PACKAGES := kmod-brcmfmac $(USB3_PACKAGES)
+  DEVICE_PACKAGES := $(BRCMFMAC_43602A1) $(USB3_PACKAGES)
   $(Device/netgear)
   NETGEAR_BOARD_ID := U12H315T00_NETGEAR
 endef
 
 define Device/netgear-r8500
   DEVICE_TITLE := Netgear R8500
-  DEVICE_PACKAGES := kmod-brcmfmac $(USB3_PACKAGES)
+  DEVICE_PACKAGES := $(BRCMFMAC_4366B1) $(USB3_PACKAGES)
   $(Device/netgear)
   NETGEAR_BOARD_ID := U12H334T00_NETGEAR
 endef
@@ -214,10 +232,27 @@ endef
 
 define Device/smartrg-sr400ac
   DEVICE_TITLE := SmartRG SR400ac
-  DEVICE_PACKAGES := kmod-brcmfmac $(USB3_PACKAGES)
+  DEVICE_PACKAGES := $(BRCMFMAC_43602A1) $(USB3_PACKAGES)
   IMAGES := trx
   IMAGE/trx := append-rootfs | trx-serial
 endef
+
+define Device/tenda-ac9
+  DEVICE_TITLE := Tenda AC9
+  DEVICE_PACKAGES := kmod-b43 $(USB2_PACKAGES)
+  IMAGES := trx
+  IMAGE/trx := append-rootfs | trx-serial
+endef
+TARGET_DEVICES += tenda-ac9
+
+define Device/tplink-archer-c9-v1
+  DEVICE_TITLE := TP-LINK Archer C9 V1
+  DEVICE_PACKAGES := $(USB3_PACKAGES)
+  IMAGES := bin
+  IMAGE/bin := append-rootfs | bcm53xx-tplink-safeloader
+  TPLINK_BOARD := ARCHERC9
+endef
+TARGET_DEVICES += tplink-archer-c9-v1
 
 TARGET_DEVICES += \
 	netgear-r6250 netgear-r6300-v2 netgear-r8000 \

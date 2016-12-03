@@ -244,26 +244,19 @@ E2SIZE=$(shell echo $$(($(CONFIG_TARGET_ROOTFS_PARTSIZE)*1024*1024)))
 define Image/mkfs/ext4
 	$(STAGING_DIR_HOST)/bin/make_ext4fs \
 		-l $(E2SIZE) -b $(CONFIG_TARGET_EXT4_BLOCKSIZE) \
-		-i $(CONFIG_TARGET_EXT4_MAXINODE) \
-		-m $(CONFIG_TARGET_EXT4_RESERVED_PCT) \
+		$(if $(CONFIG_TARGET_EXT4_RESERVED_PCT),-m $(CONFIG_TARGET_EXT4_RESERVED_PCT)) \
 		$(if $(CONFIG_TARGET_EXT4_JOURNAL),,-J) \
 		$(if $(SOURCE_DATE_EPOCH),-T $(SOURCE_DATE_EPOCH)) \
 		$@ $(call mkfs_target_dir,$(1))/
 endef
 
-define Image/mkfs/prepare/default
-	# Use symbolic permissions to avoid clobbering SUID/SGID/sticky bits
-	- $(FIND) $(1) -type f -not -perm /0100 -not -name 'ssh_host*' -not -name 'shadow' -print0 | $(XARGS) -0 chmod u+rw,g+r,o+r
-	- $(FIND) $(1) -type f -perm /0100 -print0 | $(XARGS) -0 chmod u+rwx,g+rx,o+rx
-	- $(FIND) $(1) -type d -print0 | $(XARGS) -0 chmod u+rwx,g+rx,o+rx
-	$(INSTALL_DIR) $(1)/tmp $(1)/overlay
-	chmod 1777 $(1)/tmp
+define Image/Manifest
+	$(STAGING_DIR_HOST)/bin/opkg \
+		--offline-root $(TARGET_DIR) \
+		--add-arch all:100 \
+		--add-arch $(if $(ARCH_PACKAGES),$(ARCH_PACKAGES),$(BOARD)):200 list-installed > \
+		$(BIN_DIR)/$(IMG_PREFIX)$(if $(PROFILE_SANITIZED),-$(PROFILE_SANITIZED)).manifest
 endef
-
-define Image/mkfs/prepare
-	$(call Image/mkfs/prepare/default,$(1))
-endef
-
 
 ifdef CONFIG_TARGET_ROOTFS_TARGZ
   define Image/Build/targz
@@ -286,27 +279,23 @@ mkfs_cur_target_dir = $(call mkfs_target_dir,pkg=$(target_params))
 
 opkg_target = \
 	$(call opkg,$(mkfs_cur_target_dir)) \
-		-f $(mkfs_cur_target_dir).conf \
-		-l $(mkfs_cur_target_dir).tmp
+		-f $(mkfs_cur_target_dir).conf
 
 target-dir-%: FORCE
 	rm -rf $(mkfs_cur_target_dir) $(mkfs_cur_target_dir).opkg
-	$(CP) $(TARGET_DIR) $(mkfs_cur_target_dir)
-	mv $(mkfs_cur_target_dir)/etc/opkg $(mkfs_cur_target_dir).opkg
+	$(CP) $(TARGET_DIR_ORIG) $(mkfs_cur_target_dir)
+	-mv $(mkfs_cur_target_dir)/etc/opkg $(mkfs_cur_target_dir).opkg
 	echo 'src default file://$(PACKAGE_DIR_ALL)' > $(mkfs_cur_target_dir).conf
+	$(if $(mkfs_packages_remove), \
+		-$(call opkg,$(mkfs_cur_target_dir)) remove \
+			$(mkfs_packages_remove))
 	$(if $(call opkg_package_files,$(mkfs_packages_add)), \
 		$(opkg_target) update && \
 		$(opkg_target) install \
 			$(call opkg_package_files,$(mkfs_packages_add)))
-	$(if $(mkfs_packages_remove), \
-		$(call opkg,$(mkfs_cur_target_dir)) remove \
-			$(mkfs_packages_remove))
-	$(call Image/mkfs/prepare,$(mkfs_cur_target_dir))
 	$(call prepare_rootfs,$(mkfs_cur_target_dir))
-	mv $(mkfs_cur_target_dir).opkg $(mkfs_cur_target_dir)/etc/opkg
-	rm -rf \
-		$(mkfs_cur_target_dir).conf \
-		$(mkfs_cur_target_dir).tmp
+	-mv $(mkfs_cur_target_dir).opkg $(mkfs_cur_target_dir)/etc/opkg
+	rm -f $(mkfs_cur_target_dir).conf
 
 $(KDIR)/root.%: kernel_prepare
 	$(call Image/mkfs/$(word 1,$(target_params)),$(target_params))
@@ -346,7 +335,8 @@ define Device/Init
   PAGESIZE :=
   SUBPAGESIZE :=
   VID_HDR_OFFSET :=
-  UBINIZE_OPTS := -E 5
+  UBINIZE_OPTS :=
+  UBINIZE_PARTS :=
   MKUBIFS_OPTS :=
 
   FS_OPTIONS/ubifs = $$(MKUBIFS_OPTS)
@@ -356,16 +346,19 @@ define Device/Init
 
   BOARD_NAME :=
   UIMAGE_NAME :=
+  SUPPORTED_DEVICES :=
+  IMAGE_METADATA :=
 
   FILESYSTEMS := $(TARGET_FILESYSTEMS)
 endef
 
 DEFAULT_DEVICE_VARS := \
-  DEVICE_NAME KERNEL KERNEL_INITRAMFS KERNEL_INITRAMFS_IMAGE \
+  DEVICE_NAME KERNEL KERNEL_INITRAMFS KERNEL_SIZE KERNEL_INITRAMFS_IMAGE \
   DEVICE_DTS DEVICE_DTS_DIR BOARD_NAME CMDLINE \
   UBOOTENV_IN_UBI KERNEL_IN_UBI \
   BLOCKSIZE PAGESIZE SUBPAGESIZE VID_HDR_OFFSET \
-  UBINIZE_OPTS UIMAGE_NAME
+  UBINIZE_OPTS UIMAGE_NAME UBINIZE_PARTS \
+  SUPPORTED_DEVICES IMAGE_METADATA
 
 define Device/ExportVar
   $(1) : $(2):=$$($(2))
@@ -382,11 +375,21 @@ else
   DEVICE_CHECK_PROFILE = $(CONFIG_TARGET_$(if $(CONFIG_TARGET_MULTI_PROFILE),DEVICE_)$(call target_conf,$(BOARD)$(if $(SUBTARGET),_$(SUBTARGET)))_$(1))
 endif
 
+DEVICE_EXTRA_PACKAGES = $(call qstrip,$(CONFIG_TARGET_DEVICE_PACKAGES_$(call target_conf,$(BOARD)$(if $(SUBTARGET),_$(SUBTARGET)))_DEVICE_$(1)))
+
+define merge_packages
+  $(1) :=
+  $(foreach pkg,$(2),
+    $(1) := $$(strip $$(filter-out -$$(patsubst -%,%,$(pkg)) $$(patsubst -%,%,$(pkg)),$$($(1))) $(pkg))
+  )
+endef
+
 define Device/Check/Common
   _PROFILE_SET = $$(strip $$(foreach profile,$$(PROFILES) DEVICE_$(1),$$(call DEVICE_CHECK_PROFILE,$$(profile))))
   ifdef TARGET_PER_DEVICE_ROOTFS
-    ROOTFS_ID/$(1) := $$(if $$(_PROFILE_SET),$$(call mkfs_packages_id,$$(DEVICE_PACKAGES)))
-    PACKAGES_$$(ROOTFS_ID/$(1)) := $$(DEVICE_PACKAGES)
+    $$(eval $$(call merge_packages,_PACKAGES,$$(DEVICE_PACKAGES) $$(call DEVICE_EXTRA_PACKAGES,$(1))))
+    ROOTFS_ID/$(1) := $$(if $$(_PROFILE_SET),$$(call mkfs_packages_id,$$(_PACKAGES)))
+    PACKAGES_$$(ROOTFS_ID/$(1)) := $$(_PACKAGES)
   endif
 endef
 
@@ -414,13 +417,6 @@ define Device/Build/initramfs
 endef
 endif
 
-define Device/Build/check_size
-	@[ $$(($(subst k,* 1024,$(subst m, * 1024k,$(1))))) -ge "$$(stat -c%s $@)" ] || { \
-		echo "WARNING: Image file $@ is too big" >&2; \
-		rm -f $@; \
-	}
-endef
-
 define Device/Build/compile
   $$(_COMPILE_TARGET): $(KDIR)/$(1)
   $(eval $(call Device/Export,$(KDIR)/$(1)))
@@ -442,7 +438,7 @@ define Device/Build/kernel
     $$(KDIR_KERNEL_IMAGE): $(KDIR)/$$(KERNEL_NAME) $(CURDIR)/Makefile $$(KERNEL_DEPENDS)
 	@rm -f $$@
 	$$(call concat_cmd,$$(KERNEL))
-	$$(if $$(KERNEL_SIZE),$$(call Device/Build/check_size,$$(KERNEL_SIZE)))
+	$$(if $$(KERNEL_SIZE),$$(call Build/check-size,$$(KERNEL_SIZE)))
   endif
 endef
 
@@ -522,7 +518,7 @@ define BuildImage
   image_prepare:
 
   ifeq ($(IB),)
-    .PHONY: download prepare compile clean image_prepare mkfs_prepare kernel_prepare install install-images
+    .PHONY: download prepare compile clean image_prepare kernel_prepare install install-images
     compile:
 		$(call Build/Compile)
 
@@ -541,10 +537,7 @@ define BuildImage
 		mkdir -p $(BIN_DIR) $(KDIR)/tmp
   endif
 
-  mkfs_prepare: image_prepare
-	$(call Image/mkfs/prepare,$(TARGET_DIR))
-
-  kernel_prepare: mkfs_prepare
+  kernel_prepare: image_prepare
 	$(call Image/Build/targz)
 	$(call Image/Build/cpiogz)
 	$(call Image/BuildKernel)
@@ -564,5 +557,6 @@ define BuildImage
 	$(MAKE) legacy-images
 
   install: install-images
+	$(call Image/Manifest)
 
 endef

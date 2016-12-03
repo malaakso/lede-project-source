@@ -16,9 +16,12 @@ board=$(ar71xx_board_name)
 case "$board" in
 alfa-ap120c | \
 all0258n | \
+ap90q | \
 cap324 | \
 cap4200ag | \
 carambola2 | \
+cpe830 | \
+cpe870 | \
 cr3000 | \
 cr5000 | \
 eap300v2 | \
@@ -54,6 +57,7 @@ om2p-lc)
 dr531)
 	ubootenv_add_uci_config "/dev/mtd1" "0x0" "0xf800" "0x10000"
 	;;
+dap-2695-a1 | \
 wzr-hp-ag300h)
 	ubootenv_add_uci_config "/dev/mtd3" "0x0" "0x10000" "0x10000"
 	;;

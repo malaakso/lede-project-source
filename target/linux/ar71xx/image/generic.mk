@@ -1,3 +1,12 @@
+define Device/ap90q
+  DEVICE_TITLE := YunCore AP90Q
+  BOARDNAME = AP90Q
+  IMAGE_SIZE = 16000k
+  CONSOLE = ttyS0,115200
+  MTDPARTS = spi0.0:256k(u-boot)ro,64k(u-boot-env),16000k(firmware),64k(art)ro
+endef
+TARGET_DEVICES += ap90q
+
 define Device/bsb
   DEVICE_TITLE := Smart Electronics Black Swift board
   DEVICE_PACKAGES := kmod-usb-core kmod-usb2
@@ -23,9 +32,81 @@ define Device/cf-e316n-v2
   BOARDNAME = CF-E316N-V2
   IMAGE_SIZE = 16192k
   CONSOLE = ttyS0,115200
-  MTDPARTS = spi0.0:64k(u-boot)ro,64k(art)ro,16192k(firmware),64k(nvram)ro
+  MTDPARTS = spi0.0:64k(u-boot)ro,64k(art)ro,16192k(firmware),64k(art-backup)ro
 endef
 TARGET_DEVICES += cf-e316n-v2
+
+define Device/cf-e320n-v2
+  $(Device/cf-e316n-v2)
+  DEVICE_TITLE := COMFAST CF-E320N v2
+  DEVICE_PACKAGES := kmod-usb-core kmod-usb2
+  BOARDNAME = CF-E320N-V2
+endef
+TARGET_DEVICES += cf-e320n-v2
+
+define Device/cf-e380ac-v1
+  DEVICE_TITLE := COMFAST CF-E380AC v1
+  DEVICE_PACKAGES := kmod-usb-core kmod-usb2 kmod-ath10k ath10k-firmware-qca988x
+  BOARDNAME = CF-E380AC-V1
+  IMAGE_SIZE = 16128k
+  CONSOLE = ttyS0,115200
+  MTDPARTS = spi0.0:128k(u-boot)ro,64k(art)ro,16128k(firmware),64k(art-backup)ro
+endef
+TARGET_DEVICES += cf-e380ac-v1
+
+define Device/cf-e380ac-v2
+  $(Device/cf-e380ac-v1)
+  DEVICE_TITLE := COMFAST CF-E380AC v2
+  BOARDNAME = CF-E380AC-V2
+  IMAGE_SIZE = 16000k
+  MTDPARTS = spi0.0:256k(u-boot)ro,64k(art)ro,16000k(firmware),64k(art-backup)ro
+endef
+TARGET_DEVICES += cf-e380ac-v2
+
+define Device/cf-e520n
+  DEVICE_TITLE := COMFAST CF-E520N
+  DEVICE_PACKAGES := kmod-usb-core kmod-usb2
+  BOARDNAME = CF-E520N
+  IMAGE_SIZE = 8000k
+  CONSOLE = ttyS0,115200
+  MTDPARTS = spi0.0:64k(u-boot)ro,64k(art)ro,8000k(firmware),64k(art-backup)ro
+endef
+TARGET_DEVICES += cf-e520n
+
+define Device/cf-e530n
+  $(Device/cf-e520n)
+  DEVICE_TITLE := COMFAST CF-E530N
+  BOARDNAME = CF-E530N
+endef
+TARGET_DEVICES += cf-e530n
+
+define Device/cpe830
+  $(Device/ap90q)
+  DEVICE_TITLE := YunCore CPE830
+  DEVICE_PACKAGES := rssileds
+  BOARDNAME = CPE830
+endef
+TARGET_DEVICES += cpe830
+
+define Device/cpe870
+  DEVICE_TITLE := YunCore CPE870
+  DEVICE_PACKAGES := rssileds
+  BOARDNAME = CPE870
+  IMAGE_SIZE = 7936k
+  CONSOLE = ttyS0,115200
+  MTDPARTS = spi0.0:64k(u-boot)ro,64k(u-boot-env),7936k(firmware),64k(config)ro,64k(art)ro
+endef
+TARGET_DEVICES += cpe870
+
+define Device/dragino2
+  BOARDNAME := DRAGINO2
+  CONSOLE := ttyATH0,115200
+  DEVICE_PACKAGES := kmod-usb-core kmod-usb-ohci kmod-usb2 kmod-usb-ledtrig-usbport
+  DEVICE_TITLE := Dragino 2 (MS14)
+  IMAGE_SIZE := 16000k
+  MTDPARTS := spi0.0:256k(u-boot)ro,16000k(firmware),64k(config)ro,64k(art)ro
+endef
+TARGET_DEVICES += dragino2
 
 define Device/weio
   DEVICE_TITLE := WeIO
@@ -87,6 +168,32 @@ define Device/gl-mifi
 endef
 TARGET_DEVICES += gl-mifi
 
+define Device/mr12
+  DEVICE_TITLE := Meraki MR12
+  DEVICE_PACKAGES := kmod-spi-gpio
+  BOARDNAME = MR12
+  IMAGE_SIZE = 15680k
+  MTDPARTS = spi0.0:256k(u-boot)ro,256k(u-boot-env)ro,13440k(rootfs),2240k(kernel),64k(mac),128k(art)ro,15680k@0x80000(firmware)
+  IMAGE/kernel.bin = append-kernel
+  IMAGE/rootfs.bin = append-rootfs | pad-rootfs
+  IMAGE/sysupgrade.bin = append-rootfs | pad-rootfs | pad-to 13440k | append-kernel | check-size $$$$(IMAGE_SIZE)
+  IMAGES := kernel.bin rootfs.bin sysupgrade.bin
+endef
+TARGET_DEVICES += mr12
+
+define Device/mr16
+  DEVICE_TITLE := Meraki MR16
+  DEVICE_PACKAGES := kmod-spi-gpio
+  BOARDNAME = MR16
+  IMAGE_SIZE = 15680k
+  MTDPARTS = spi0.0:256k(u-boot)ro,256k(u-boot-env)ro,13440k(rootfs),2240k(kernel),64k(mac),128k(art)ro,15680k@0x80000(firmware)
+  IMAGE/kernel.bin = append-kernel
+  IMAGE/rootfs.bin = append-rootfs | pad-rootfs
+  IMAGE/sysupgrade.bin = append-rootfs | pad-rootfs | pad-to 13440k | append-kernel | check-size $$$$(IMAGE_SIZE)
+  IMAGES := kernel.bin rootfs.bin sysupgrade.bin
+endef
+TARGET_DEVICES += mr16
+
 define Device/dr531
   DEVICE_TITLE := Wallys DR531
   DEVICE_PACKAGES := kmod-usb-core kmod-usb2
@@ -98,7 +205,7 @@ TARGET_DEVICES += dr531
 
 define Device/wndr3700
   DEVICE_TITLE := NETGEAR WNDR3700
-  DEVICE_PACKAGES := kmod-usb-core kmod-usb-ohci kmod-usb2 kmod-ledtrig-usbdev kmod-leds-wndr3700-usb
+  DEVICE_PACKAGES := kmod-usb-core kmod-usb-ohci kmod-usb2 kmod-usb-ledtrig-usbport kmod-leds-wndr3700-usb
   BOARDNAME = WNDR3700
   NETGEAR_KERNEL_MAGIC = 0x33373030
   NETGEAR_BOARD_ID = WNDR3700
@@ -106,7 +213,7 @@ define Device/wndr3700
   MTDPARTS = spi0.0:320k(u-boot)ro,128k(u-boot-env)ro,7680k(firmware),64k(art)ro
   IMAGES := sysupgrade.bin factory.img factory-NA.img
   KERNEL := kernel-bin | patch-cmdline | lzma -d20 | netgear-uImage lzma
-  IMAGE/default = append-kernel $$$$(BLOCKSIZE) | netgear-squashfs | append-rootfs | pad-rootfs
+  IMAGE/default = append-kernel | pad-to $$$$(BLOCKSIZE) | netgear-squashfs | append-rootfs | pad-rootfs
   IMAGE/sysupgrade.bin = $$(IMAGE/default) | check-size $$$$(IMAGE_SIZE)
   IMAGE/factory.img = $$(IMAGE/default) | netgear-dni | check-size $$$$(IMAGE_SIZE)
   IMAGE/factory-NA.img = $$(IMAGE/default) | netgear-dni NA | check-size $$$$(IMAGE_SIZE)
@@ -156,7 +263,7 @@ define Device/cap324
   BOARDNAME := CAP324
   DEVICE_PROFILE := CAP324
   IMAGE_SIZE = 15296k
-  MTDPARTS = spi0.0:256k(u-boot),64k(u-boot-env)ro,15296k(firmware),640k(certs),64k(nvram),64k(art)
+  MTDPARTS = spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,15296k(firmware),640k(certs),64k(nvram),64k(art)ro
 endef
 
 TARGET_DEVICES += cap324
@@ -167,7 +274,7 @@ define Device/cap324-nocloud
   BOARDNAME := CAP324
   DEVICE_PROFILE := CAP324
   IMAGE_SIZE = 16000k
-  MTDPARTS = spi0.0:256k(u-boot),64k(u-boot-env)ro,16000k(firmware),64k(art)
+  MTDPARTS = spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,16000k(firmware),64k(art)ro
 endef
 
 TARGET_DEVICES += cap324-nocloud
@@ -178,7 +285,7 @@ define Device/cr3000
   BOARDNAME := CR3000
   DEVICE_PROFILE := CR3000
   IMAGE_SIZE = 7104k
-  MTDPARTS = spi0.0:256k(u-boot),64k(u-boot-env)ro,7104k(firmware),640k(certs),64k(nvram),64k(art)
+  MTDPARTS = spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,7104k(firmware),640k(certs),64k(nvram),64k(art)ro
 endef
 
 TARGET_DEVICES += cr3000
@@ -189,29 +296,29 @@ define Device/cr3000-nocloud
   BOARDNAME := CR3000
   DEVICE_PROFILE := CR3000
   IMAGE_SIZE = 7808k
-  MTDPARTS = spi0.0:256k(u-boot),64k(u-boot-env)ro,7808k(firmware),64k(art)
+  MTDPARTS = spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,7808k(firmware),64k(art)ro
 endef
 
 TARGET_DEVICES += cr3000-nocloud
 
 define Device/cr5000
   DEVICE_TITLE := PowerCloud CR5000 Cloud Router
-  DEVICE_PACKAGES := uboot-envtools kmod-usb2 kmod-usb-ohci kmod-ledtrig-usbdev kmod-usb-core
+  DEVICE_PACKAGES := uboot-envtools kmod-usb2 kmod-usb-ohci kmod-usb-ledtrig-usbport kmod-usb-core
   BOARDNAME := CR5000
   DEVICE_PROFILE := CR5000
   IMAGE_SIZE = 7104k
-  MTDPARTS = spi0.0:256k(u-boot),64k(u-boot-env)ro,7104k(firmware),640k(certs),64k(nvram),64k(art)
+  MTDPARTS = spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,7104k(firmware),640k(certs),64k(nvram),64k(art)ro
 endef
 
 TARGET_DEVICES += cr5000
 
 define Device/cr5000-nocloud
   DEVICE_TITLE := PowerCloud CR5000 (No-Cloud)
-  DEVICE_PACKAGES := uboot-envtools kmod-usb2 kmod-usb-ohci kmod-ledtrig-usbdev kmod-usb-core
+  DEVICE_PACKAGES := uboot-envtools kmod-usb2 kmod-usb-ohci kmod-usb-ledtrig-usbport kmod-usb-core
   BOARDNAME := CR5000
   DEVICE_PROFILE := CR5000
   IMAGE_SIZE = 7808k
-  MTDPARTS = spi0.0:256k(u-boot),64k(u-boot-env)ro,7808k(firmware),64k(art)
+  MTDPARTS = spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,7808k(firmware),64k(art)ro
 endef
 
 TARGET_DEVICES += cr5000-nocloud
@@ -320,7 +427,7 @@ TARGET_DEVICES += mc-mac1200r
 define Device/minibox-v1
   $(Device/tplink-16mlzma)
   DEVICE_TITLE := Gainstrong MiniBox V1.0
-  DEVICE_PACKAGES := kmod-usb-core kmod-usb2  kmod-ledtrig-usbdev
+  DEVICE_PACKAGES := kmod-usb-core kmod-usb2  kmod-usb-ledtrig-usbport
   BOARDNAME := MINIBOX-V1
   DEVICE_PROFILE := MINIBOXV1
   TPLINK_HWID := 0x3C000201
@@ -391,7 +498,7 @@ TARGET_DEVICES += tellstick-znet-lite
 define Device/oolite
   $(Device/tplink-16mlzma)
   DEVICE_TITLE := Gainstrong OOLITE
-  DEVICE_PACKAGES := kmod-usb-core kmod-usb2 kmod-ledtrig-usbdev
+  DEVICE_PACKAGES := kmod-usb-core kmod-usb2 kmod-usb-ledtrig-usbport
   BOARDNAME := GS-OOLITE
   DEVICE_PROFILE := OOLITE
   TPLINK_HWID := 0x3C000101
@@ -402,7 +509,7 @@ TARGET_DEVICES += oolite
 
 define Device/NBG6616
   DEVICE_TITLE := ZyXEL NBG6616
-  DEVICE_PACKAGES := kmod-usb-core kmod-usb2 kmod-ledtrig-usbdev kmod-usb-storage kmod-rtc-pcf8563 kmod-ath10k ath10k-firmware-qca988x
+  DEVICE_PACKAGES := kmod-usb-core kmod-usb2 kmod-usb-ledtrig-usbport kmod-usb-storage kmod-rtc-pcf8563 kmod-ath10k ath10k-firmware-qca988x
   BOARDNAME = NBG6616
   KERNEL_SIZE = 2048k
   IMAGE_SIZE = 15323k
@@ -410,7 +517,7 @@ define Device/NBG6616
   CMDLINE += mem=128M
   IMAGES := sysupgrade.bin
   KERNEL := kernel-bin | patch-cmdline | lzma | uImage lzma | jffs2 boot/vmlinux.lzma.uImage
-  IMAGE/sysupgrade.bin = append-kernel $$$$(KERNEL_SIZE) | append-rootfs | pad-rootfs | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin = append-kernel | pad-to $$$$(KERNEL_SIZE) | append-rootfs | pad-rootfs | check-size $$$$(IMAGE_SIZE)
   # We cannot currently build a factory image. It is the sysupgrade image
   # prefixed with a header (which is actually written into the MTD device).
   # The header is 2kiB and is filled with 0xff. The format seems to be:
@@ -443,7 +550,7 @@ define Device/c-55
   KERNEL_SIZE = 2048k
   IMAGE_SIZE = 15872k
   MTDPARTS = spi0.0:256k(u-boot)ro,128k(u-boot-env)ro,2048k(kernel),13824k(rootfs),13824k(opt)ro,2624k(failsafe)ro,64k(art)ro,15872k@0x60000(firmware)
-  IMAGE/sysupgrade.bin = append-kernel $$$$(KERNEL_SIZE) | append-rootfs | pad-rootfs | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin = append-kernel | pad-to $$$$(KERNEL_SIZE) | append-rootfs | pad-rootfs | check-size $$$$(IMAGE_SIZE)
 endef
 
 TARGET_DEVICES += c-55
@@ -472,53 +579,51 @@ endef
 TARGET_DEVICES += hiwifi-hc6361
 
 
-# The pre-filled 64 bytes consist of
-# - 28 bytes seama_header
-# - 36 bytes of META data (4-bytes aligned)
-define Build/seama-factory
-	( dd if=/dev/zero bs=64 count=1; cat $(IMAGE_KERNEL) ) >$@.loader.tmp
-	( dd if=$@.loader.tmp bs=64k conv=sync; dd if=$(IMAGE_ROOTFS) ) >$@.tmp.0
-	tail -c +65 $@.tmp.0 >$@.tmp.1
-	$(STAGING_DIR_HOST)/bin/seama \
-		-i $@.tmp.1 \
-		-m "dev=/dev/mtdblock/1" -m "type=firmware"
-	$(STAGING_DIR_HOST)/bin/seama \
-		-s $@ \
-		-m "signature=$(1)" \
-		-i $@.tmp.1.seama
-	rm -f $@.loader.tmp $@.tmp.*
-endef
-
-define Build/seama-sysupgrade
-	$(STAGING_DIR_HOST)/bin/seama \
-		-i $(IMAGE_KERNEL) \
-		-m "dev=/dev/mtdblock/1" -m "type=firmware"
-	( dd if=$(IMAGE_KERNEL).seama bs=64k conv=sync; dd if=$(IMAGE_ROOTFS) ) >$@
-	rm -f $(IMAGE_KERNEL).seama
-endef
-
-define Build/seama-initramfs
-	$(STAGING_DIR_HOST)/bin/seama \
-		-i $@ \
-		-m "dev=/dev/mtdblock/1" -m "type=firmware"
+define Build/seama
+	$(STAGING_DIR_HOST)/bin/seama -i $@ $(if $(1),$(1),-m "dev=/dev/mtdblock/1" -m "type=firmware")
 	mv $@.seama $@
 endef
 
-define Build/seama-pad-rootfs
-	$(STAGING_DIR_HOST)/bin/padjffs2 $(IMAGE_ROOTFS) -c 64 >>$@
+define Build/seama-seal
+	$(call Build/seama,-s $@.seama $(1))
 endef
 
 define Device/seama
   CONSOLE := ttyS0,115200
   LOADER_TYPE := bin
-  KERNEL := kernel-bin | lzma | loader-kernel-cmdline | lzma
-  KERNEL_INITRAMFS := kernel-bin | patch-cmdline | lzma | seama-initramfs
+  BLOCKSIZE := 64k
+  KERNEL := kernel-bin | patch-cmdline | relocate-kernel | lzma
+  KERNEL_INITRAMFS := kernel-bin | patch-cmdline | lzma | seama
   KERNEL_INITRAMFS_SUFFIX = $$(KERNEL_SUFFIX).seama
   IMAGES := sysupgrade.bin factory.bin
-  IMAGE/sysupgrade.bin := seama-sysupgrade $$$$(SEAMA_SIGNATURE) | seama-pad-rootfs | check-size $$$$(IMAGE_SIZE)
-  IMAGE/factory.bin := seama-factory $$$$(SEAMA_SIGNATURE) | seama-pad-rootfs | check-size $$$$(IMAGE_SIZE)
+
+  # 64 bytes offset:
+  # - 28 bytes seama_header
+  # - 36 bytes of META data (4-bytes aligned)
+  IMAGE/default := append-kernel | pad-offset $$$$(BLOCKSIZE) 64 | append-rootfs
+  IMAGE/sysupgrade.bin := \
+	$$(IMAGE/default) | seama | pad-rootfs | \
+	check-size $$$$(IMAGE_SIZE)
+  IMAGE/factory.bin := \
+	$$(IMAGE/default) | seama | pad-rootfs | \
+	seama-seal -m "signature=$$$$(SEAMA_SIGNATURE)" | \
+	check-size $$$$(IMAGE_SIZE)
   SEAMA_SIGNATURE :=
   DEVICE_VARS += SEAMA_SIGNATURE
+endef
+
+define Device/dir-869-a1
+$(Device/seama)
+  DEVICE_TITLE := D-Link DIR-869 rev. A1
+  DEVICE_PACKAGES := kmod-ath10k ath10k-firmware-qca988x
+  BOARDNAME = DIR-869-A1
+  IMAGE_SIZE = 15872k
+  MTDPARTS = spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,64k(devdata)ro,64k(devconf)ro,15872k(firmware),64k(radiocfg)ro
+  SEAMA_SIGNATURE := wrgac54_dlink.2015_dir869
+  IMAGE/factory.bin := \
+	$$(IMAGE/default) | pad-rootfs -x 64 | \
+	seama | seama-seal -m "signature=$$$$(SEAMA_SIGNATURE)" | \
+	check-size $$$$(IMAGE_SIZE)
 endef
 
 define Device/mynet-n600
@@ -544,11 +649,61 @@ endef
 define Device/qihoo-c301
 $(Device/seama)
   DEVICE_TITLE := Qihoo C301
-  DEVICE_PACKAGES :=  kmod-usb-core kmod-usb2 kmod-ledtrig-usbdev kmod-ath10k ath10k-firmware-qca988x
+  DEVICE_PACKAGES :=  kmod-usb-core kmod-usb2 kmod-usb-ledtrig-usbport kmod-ath10k ath10k-firmware-qca988x
   BOARDNAME = QIHOO-C301
   IMAGE_SIZE = 15744k
   MTDPARTS = spi0.0:256k(u-boot)ro,64k(u-boot-env),64k(devdata),64k(devconf),15744k(firmware),64k(warm_start),64k(action_image_config),64k(radiocfg)ro;spi0.1:15360k(upgrade2),1024k(privatedata)
   SEAMA_SIGNATURE := wrgac26_qihoo360_360rg
 endef
 
-TARGET_DEVICES += mynet-n600 mynet-n750 qihoo-c301
+TARGET_DEVICES += dir-869-a1 mynet-n600 mynet-n750 qihoo-c301
+
+define Build/mkwrggimg
+	$(STAGING_DIR_HOST)/bin/mkwrggimg -b \
+		-i $@ -o $@.imghdr -d /dev/mtdblock/1 \
+		-m $(BOARDNAME) -s $(DAP_SIGNATURE) \
+		-v LEDE -B $(REVISION)
+	mv $@.imghdr $@
+endef
+
+define Build/wrgg-pad-rootfs
+	$(STAGING_DIR_HOST)/bin/padjffs2 $(IMAGE_ROOTFS) -c 64 >>$@
+endef
+
+define Device/dap-2695-a1
+  DEVICE_TITLE := D-Link DAP-2695 rev. A1
+  DEVICE_PACKAGES := ath10k-firmware-qca988x kmod-ath10k uboot-envtools
+  BOARDNAME = DAP-2695-A1
+  IMAGES := factory.img sysupgrade.bin
+  IMAGE_SIZE = 15360k
+  IMAGE/factory.img = append-kernel | pad-offset 65536 160 | append-rootfs | wrgg-pad-rootfs | mkwrggimg | check-size $$$$(IMAGE_SIZE)
+  IMAGE/sysupgrade.bin = append-kernel | pad-offset 65536 160 | mkwrggimg | append-rootfs | wrgg-pad-rootfs | check-size $$$$(IMAGE_SIZE)
+  KERNEL := kernel-bin | patch-cmdline | relocate-kernel | lzma
+  KERNEL_INITRAMFS := $$(KERNEL) | mkwrggimg
+  MTDPARTS = spi0.0:256k(bootloader)ro,64k(bdcfg)ro,64k(rgdb)ro,64k(langpack)ro,15360k(firmware),448k(captival)ro,64k(certificate)ro,64k(radiocfg)ro
+  DAP_SIGNATURE := wapac02_dkbs_dap2695
+  DEVICE_VARS += DAP_SIGNATURE
+endef
+
+TARGET_DEVICES += dap-2695-a1
+
+define Build/mkbuffaloimg
+	$(STAGING_DIR_HOST)/bin/mkbuffaloimg -B $(BOARDNAME) \
+		-R $$(($(subst k, * 1024,$(ROOTFS_SIZE)))) \
+		-K $$(($(subst k, * 1024,$(KERNEL_SIZE)))) \
+		-i $@ -o $@.new
+	mv $@.new $@
+endef
+
+define Device/bhr-4grv2
+  DEVICE_TITLE := Buffalo BHR-4GRV2
+  BOARDNAME := BHR-4GRV2
+  ROOTFS_SIZE := 14528k
+  KERNEL_SIZE := 1472k
+  IMAGE_SIZE := 16000k
+  MTDPARTS := spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,14528k(rootfs),1472k(kernel),64k(art)ro,16000k@0x50000(firmware)
+  IMAGES := sysupgrade.bin factory.bin
+  IMAGE/sysupgrade.bin = append-rootfs | pad-rootfs | pad-to $$$$(ROOTFS_SIZE) | append-kernel | check-size $$$$(IMAGE_SIZE)
+  IMAGE/factory.bin = append-kernel | pad-to $$$$(KERNEL_SIZE) | append-rootfs | mkbuffaloimg
+endef
+TARGET_DEVICES += bhr-4grv2

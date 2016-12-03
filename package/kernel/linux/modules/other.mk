@@ -398,10 +398,9 @@ define KernelPackage/rfkill
   TITLE:=RF switch subsystem support
   DEPENDS:=@USE_RFKILL +kmod-input-core
   KCONFIG:= \
-    CONFIG_RFKILL \
+    CONFIG_RFKILL_FULL \
     CONFIG_RFKILL_INPUT=y \
-    CONFIG_RFKILL_LEDS=y \
-    CONFIG_RFKILL_GPIO=y
+    CONFIG_RFKILL_LEDS=y
   FILES:= \
     $(LINUX_DIR)/net/rfkill/rfkill.ko
   AUTOLOAD:=$(call AutoLoad,20,rfkill)
@@ -530,6 +529,24 @@ define KernelPackage/rtc-ds1307/description
 endef
 
 $(eval $(call KernelPackage,rtc-ds1307))
+
+
+define KernelPackage/rtc-ds1374
+  SUBMENU:=$(OTHER_MENU)
+  TITLE:=Dallas/Maxim DS1374 RTC support
+  DEPENDS:=@RTC_SUPPORT +kmod-i2c-core
+  KCONFIG:=CONFIG_RTC_DRV_DS1374 \
+	CONFIG_RTC_DRV_DS1374_WDT=n \
+	CONFIG_RTC_CLASS=y
+  FILES:=$(LINUX_DIR)/drivers/rtc/rtc-ds1374.ko
+  AUTOLOAD:=$(call AutoProbe,rtc-ds1374)
+endef
+
+define KernelPackage/rtc-ds1374/description
+ Kernel module for Dallas/Maxim DS1374.
+endef
+
+$(eval $(call KernelPackage,rtc-ds1374))
 
 
 define KernelPackage/rtc-ds1672

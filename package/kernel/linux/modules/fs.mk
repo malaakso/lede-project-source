@@ -177,7 +177,8 @@ define KernelPackage/fs-ext4
   TITLE:=EXT4 filesystem support
   DEPENDS := \
     +kmod-lib-crc16 \
-    +kmod-crypto-hash
+    +kmod-crypto-hash \
+    +kmod-crypto-crc32c
   KCONFIG:= \
 	CONFIG_EXT4_FS \
 	CONFIG_EXT4_ENCRYPTION=n \
@@ -420,6 +421,22 @@ endef
 $(eval $(call KernelPackage,fs-reiserfs))
 
 
+define KernelPackage/fs-squashfs
+  SUBMENU:=$(FS_MENU)
+  TITLE:=SquashFS 4.0 filesystem support
+  KCONFIG:=CONFIG_SQUASHFS \
+	CONFIG_SQUASHFS_XZ=y
+  FILES:=$(LINUX_DIR)/fs/squashfs/squashfs.ko
+  AUTOLOAD:=$(call AutoLoad,30,squashfs,1)
+endef
+
+define KernelPackage/fs-squashfs/description
+ Kernel module for SquashFS 4.0 support
+endef
+
+$(eval $(call KernelPackage,fs-squashfs))
+
+
 define KernelPackage/fs-udf
   SUBMENU:=$(FS_MENU)
   TITLE:=UDF filesystem support
@@ -447,7 +464,7 @@ define KernelPackage/fs-vfat
 	$(LINUX_DIR)/fs/fat/fat.ko \
 	$(LINUX_DIR)/fs/fat/vfat.ko
   AUTOLOAD:=$(call AutoLoad,30,fat vfat)
-  $(call AddDepends/nls)
+  $(call AddDepends/nls,cp437 iso8859-1 utf8)
 endef
 
 define KernelPackage/fs-vfat/description

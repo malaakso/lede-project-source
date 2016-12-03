@@ -10,11 +10,11 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=mac80211
 
-PKG_VERSION:=2016-06-20
+PKG_VERSION:=2016-10-08
 PKG_RELEASE:=1
 PKG_SOURCE_URL:=http://mirror2.openwrt.org/sources
 PKG_BACKPORT_VERSION:=
-PKG_MD5SUM:=29c79bdc3928ef5113b17042ebda9237
+PKG_MD5SUM:=4f6350e3b75815060bfdf47ef266ad613c7bfea5b7b1dc4552dee69e1bebe4fb
 
 PKG_SOURCE:=compat-wireless-$(PKG_VERSION)$(PKG_BACKPORT_VERSION).tar.bz2
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/compat-wireless-$(PKG_VERSION)
@@ -250,6 +250,11 @@ define KernelPackage/ath9k/config
        config ATH9K_TX99
                bool "Enable TX99 support"
                depends on PACKAGE_kmod-ath9k
+
+	config ATH9K_UBNTHSR
+		bool "Support for Ubiquiti UniFi Outdoor+ access point"
+		depends on PACKAGE_kmod-ath9k && TARGET_ar71xx_generic
+		default y
 
 endef
 
@@ -682,8 +687,7 @@ define KernelPackage/brcmfmac
   TITLE:=Broadcom IEEE802.11n USB FullMAC WLAN driver
   URL:=https://wireless.wiki.kernel.org/en/users/drivers/brcm80211
   DEPENDS+= @USB_SUPPORT +kmod-cfg80211 +@DRIVER_11N_SUPPORT +kmod-brcmutil \
-	+BRCMFMAC_PCIE:brcmfmac-firmware-pcie \
-	+BRCMFMAC_SDIO:kmod-mmc +BRCMFMAC_SDIO:brcmfmac-firmware-sdio \
+	+BRCMFMAC_SDIO:kmod-mmc \
 	+BRCMFMAC_USB:kmod-usb-core +BRCMFMAC_USB:brcmfmac-firmware-usb
   FILES:=$(PKG_BUILD_DIR)/drivers/net/wireless/broadcom/brcm80211/brcmfmac/brcmfmac.ko
   AUTOLOAD:=$(call AutoProbe,brcmfmac)
@@ -1379,7 +1383,7 @@ endef
 define KernelPackage/wlcore
   $(call KernelPackage/mac80211/Default)
   TITLE:=TI common driver part
-  DEPENDS+= @TARGET_omap +kmod-mac80211 +@DRIVER_11N_SUPPORT
+  DEPENDS+= +kmod-mmc +kmod-mac80211 +@DRIVER_11N_SUPPORT
   FILES:= \
 	$(PKG_BUILD_DIR)/drivers/net/wireless/ti/wlcore/wlcore.ko \
 	$(PKG_BUILD_DIR)/drivers/net/wireless/ti/wlcore/wlcore_sdio.ko
@@ -1494,7 +1498,7 @@ config-$(call config_package,lib80211) += LIB80211 LIB80211_CRYPT_WEP LIB80211_C
 config-$(call config_package,airo) += AIRO
 
 config-$(call config_package,ath) += ATH_CARDS ATH_COMMON
-config-$(CONFIG_PACKAGE_ATH_DEBUG) += ATH_DEBUG ATH10K_DEBUG
+config-$(CONFIG_PACKAGE_ATH_DEBUG) += ATH_DEBUG ATH10K_DEBUG ATH9K_STATION_STATISTICS
 config-$(CONFIG_PACKAGE_ATH_DFS) += ATH9K_DFS_CERTIFIED ATH10K_DFS_CERTIFIED
 
 config-$(call config_package,ath9k) += ATH9K
@@ -1504,6 +1508,7 @@ config-$(CONFIG_PCI) += ATH9K_PCI
 config-$(CONFIG_ATH_USER_REGD) += ATH_USER_REGD
 config-$(CONFIG_ATH9K_SUPPORT_PCOEM) += ATH9K_PCOEM
 config-$(CONFIG_ATH9K_TX99) += ATH9K_TX99
+config-$(CONFIG_ATH9K_UBNTHSR) += ATH9K_UBNTHSR
 
 config-$(call config_package,ath9k-htc) += ATH9K_HTC
 config-$(call config_package,ath10k) += ATH10K ATH10K_PCI
@@ -1733,6 +1738,8 @@ define KernelPackage/cfg80211/install
 	$(INSTALL_DIR) $(1)/lib/wifi $(1)/lib/netifd/wireless
 	$(INSTALL_DATA) ./files/lib/wifi/mac80211.sh $(1)/lib/wifi
 	$(INSTALL_BIN) ./files/lib/netifd/wireless/mac80211.sh $(1)/lib/netifd/wireless
+	$(INSTALL_DIR) $(1)/etc/hotplug.d/ieee80211
+	$(INSTALL_DATA) ./files/mac80211.hotplug $(1)/etc/hotplug.d/ieee80211/00-wifi-detect
 endef
 
 define KernelPackage/ipw2100/install

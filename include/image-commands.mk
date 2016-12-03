@@ -103,20 +103,21 @@ define Build/patch-cmdline
 endef
 
 define Build/append-kernel
-	dd if=$(IMAGE_KERNEL) $(if $(1),bs=$(1) conv=sync) >> $@
+	dd if=$(IMAGE_KERNEL) >> $@
 endef
 
 define Build/append-rootfs
-	dd if=$(IMAGE_ROOTFS) $(if $(1),bs=$(1) conv=sync) >> $@
+	dd if=$(IMAGE_ROOTFS) >> $@
 endef
 
 define Build/append-ubi
 	sh $(TOPDIR)/scripts/ubinize-image.sh \
 		$(if $(UBOOTENV_IN_UBI),--uboot-env) \
 		$(if $(KERNEL_IN_UBI),--kernel $(IMAGE_KERNEL)) \
+		$(foreach part,$(UBINIZE_PARTS),--part $(part)) \
 		$(IMAGE_ROOTFS) \
 		$@.tmp \
-		-p $(BLOCKSIZE) -m $(PAGESIZE) \
+		-p $(BLOCKSIZE:%k=%KiB) -m $(PAGESIZE) \
 		$(if $(SUBPAGESIZE),-s $(SUBPAGESIZE)) \
 		$(if $(VID_HDR_OFFSET),-O $(VID_HDR_OFFSET)) \
 		$(UBINIZE_OPTS)
@@ -129,15 +130,20 @@ define Build/pad-to
 	mv $@.new $@
 endef
 
+define Build/pad-extra
+	dd if=/dev/zero bs=$(1) count=1 >> $@
+endef
+
 define Build/pad-rootfs
-	$(STAGING_DIR_HOST)/bin/padjffs2 $@ $(1) 4 8 16 64 128 256
+	$(STAGING_DIR_HOST)/bin/padjffs2 $@ $(1) \
+		$(if $(BLOCKSIZE),$(BLOCKSIZE:%k=%),4 8 16 64 128 256)
 endef
 
 define Build/pad-offset
 	let \
 		size="$$(stat -c%s $@)" \
-		pad="$(word 1, $(1))" \
-		offset="$(word 2, $(1))" \
+		pad="$(subst k,* 1024,$(word 1, $(1)))" \
+		offset="$(subst k,* 1024,$(word 2, $(1)))" \
 		pad="(pad - ((size + offset) % pad)) % pad" \
 		newsize='size + pad'; \
 		dd if=$@ of=$@.new bs=$$newsize count=1 conv=sync
@@ -165,4 +171,22 @@ define Build/sysupgrade-tar
 		--kernel $(call param_get_default,kernel,$(1),$(IMAGE_KERNEL)) \
 		--rootfs $(call param_get_default,rootfs,$(1),$(IMAGE_ROOTFS)) \
 		$@
+endef
+
+json_quote=$(subst ','\'',$(subst ",\",$(1)))
+#")')
+metadata_devices=$(if $(1),$(subst "$(space)","$(comma)",$(strip $(foreach v,$(1),"$(call json_quote,$(v))"))))
+metadata_json = \
+	'{ $(if $(IMAGE_METADATA),$(IMAGE_METADATA)$(comma)) \
+		"supported_devices":[$(call metadata_devices,$(1))], \
+		"version": { \
+			"dist": "$(call json_quote,$(VERSION_DIST))", \
+			"version": "$(call json_quote,$(VERSION_NUMBER))", \
+			"revision": "$(call json_quote,$(REVISION))", \
+			"board": "$(call json_quote,$(BOARD))" \
+		} \
+	}'
+
+define Build/append-metadata
+	$(if $(SUPPORTED_DEVICES),echo $(call metadata_json,$(SUPPORTED_DEVICES)) | fwtool -I - $@)
 endef
