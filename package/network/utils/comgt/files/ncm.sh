@@ -71,7 +71,7 @@ proto_ncm_setup() {
 
 	[ -n "$delay" ] && sleep "$delay"
 
-	manufacturer=`gcom -d "$device" -s /etc/gcom/getcardinfo.gcom | awk 'NF { print tolower($1); exit; }'`
+	manufacturer=`gcom -d "$device" -s /etc/gcom/getcardinfo.gcom | awk 'NF && $0 !~ /AT\+CGMI/ { sub(/\+CGMI: /,""); print tolower($1); exit; }'`
 	[ $? -ne 0 ] && {
 		echo "Failed to get modem information"
 		proto_notify_error "$interface" GETINFO_FAILED
@@ -125,6 +125,9 @@ proto_ncm_setup() {
 	echo "Setting up $ifname"
 	
 	proto_init_update "$ifname" 1
+	proto_add_data
+	json_add_string "manufacturer" "$manufacturer"
+	proto_close_data
 	proto_send_update "$interface"
 
 	[ "$pdptype" = "IP" -o "$pdptype" = "IPV4V6" ] && {
@@ -155,16 +158,15 @@ proto_ncm_teardown() {
 	local device profile
 	json_get_vars device profile
 
+	[ -n "$ctl_device" ] && device=$ctl_device
+
 	[ -n "$profile" ] || profile=1
 
 	echo "Stopping network $interface"
 
-	manufacturer=`gcom -d "$device" -s /etc/gcom/getcardinfo.gcom | awk 'NF { print tolower($1); exit; }'`
-	[ $? -ne 0 ] && {
-		echo "Failed to get modem information"
-		proto_notify_error "$interface" GETINFO_FAILED
-		return 1
-	}
+	json_load "$(ubus call network.interface.$interface status)"
+	json_select data
+	json_get_vars manufacturer
 
 	json_load "$(cat /etc/gcom/ncm.json)"
 	json_select "$manufacturer" || {

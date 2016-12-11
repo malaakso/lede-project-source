@@ -91,6 +91,13 @@ proto_qmi_setup() {
 	pdptype=`echo "$pdptype" | awk '{print tolower($0)}'`
 	[ "$pdptype" = "ip" -o "$pdptype" = "ipv6" -o "$pdptype" = "ipv4v6" ] || pdptype="ip"
 
+	if [ "$pdptype" = "ip" ]; then
+		[ -z "$autoconnect" ] && autoconnect=1
+		[ "$autoconnect" = 0 ] && autoconnect=""
+	else
+		[ "$autoconnect" = 1 ] || autoconnect=""
+	fi
+
 	[ "$pdptype" = "ip" -o "$pdptype" = "ipv4v6" ] && {
 		cid_4=`uqmi -s -d "$device" --get-client-id wds`
 		[ $? -ne 0 ] && {
